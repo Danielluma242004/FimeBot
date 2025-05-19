@@ -1,6 +1,8 @@
 "use client"
-// pages/admin.tsx
 import { useEffect, useState } from 'react';
+import AdminLogin from './components/AdminLogin';
+import ConsultaAnalytics from './components/ConsultaAnalytics';
+import SystemMonitor from './components/SystemMonitor';
 
 interface Consulta {
   id: string;
@@ -14,6 +16,10 @@ export default function AdminPanel() {
   const [consultas, setConsultas] = useState<Consulta[]>([]);
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // Add pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(5);
 
   useEffect(() => {
     async function fetchConsultas() {
@@ -39,6 +45,29 @@ export default function AdminPanel() {
     fetchConsultas();
   }, []);
 
+  // Calculate pagination values
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = consultas.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(consultas.length / itemsPerPage);
+
+  // Navigation functions
+  const nextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const prevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  if (!isAuthenticated) {
+    return <AdminLogin onSuccess={() => setIsAuthenticated(true)} />;
+  }
+
   return (
     <div className="min-h-screen bg-emerald-900 flex flex-col items-center justify-center text-white p-4">
       <div className="max-w-4xl w-full flex flex-col">
@@ -52,6 +81,14 @@ export default function AdminPanel() {
             Monitoreo de consultas académicas y administrativas.
           </p>
         </div>
+
+        {/* Monitor del Sistema */}
+        <div className="mb-6">
+          <SystemMonitor />
+        </div>
+
+        {/* Análisis de Consultas */}
+        <ConsultaAnalytics />
 
         {loading ? (
           <div className="flex justify-center items-center h-40">
@@ -84,7 +121,7 @@ export default function AdminPanel() {
                       </td>
                     </tr>
                   ) : (
-                    consultas.map((consulta) => (
+                    currentItems.map((consulta) => (
                       <tr key={consulta.id} className="border-b border-gray-200 hover:bg-gray-50">
                         <td className="px-4 py-3 text-sm">
                           {new Date(consulta.created_at).toLocaleString()}
@@ -108,9 +145,38 @@ export default function AdminPanel() {
             
             {consultas.length > 0 && (
               <div className="bg-gray-50 px-4 py-3 border-t border-gray-200 flex justify-between items-center">
-                <span className="text-sm text-gray-600">
-                  Total de consultas: {consultas.length}
-                </span>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-gray-600">
+                    Total de consultas: {consultas.length}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={prevPage}
+                      disabled={currentPage === 1}
+                      className={`px-3 py-1 rounded-md ${
+                        currentPage === 1
+                          ? 'bg-gray-100 text-gray-400'
+                          : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                      }`}
+                    >
+                      ← Anterior
+                    </button>
+                    <span className="text-sm text-gray-600">
+                      Página {currentPage} de {totalPages}
+                    </span>
+                    <button
+                      onClick={nextPage}
+                      disabled={currentPage === totalPages}
+                      className={`px-3 py-1 rounded-md ${
+                        currentPage === totalPages
+                          ? 'bg-gray-100 text-gray-400'
+                          : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                      }`}
+                    >
+                      Siguiente →
+                    </button>
+                  </div>
+                </div>
                 <button className="bg-emerald-700 px-4 py-2 rounded-full text-white font-medium hover:bg-emerald-800 transition">
                   Exportar datos
                 </button>
